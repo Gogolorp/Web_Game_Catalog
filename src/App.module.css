@@ -59,6 +59,10 @@
   opacity: 1;
 }
 
+.cardActive .overlay {
+  opacity: 1;
+}
+
 .title {
   margin: 0 0 12px;
   color: #ffffff;
@@ -140,6 +144,13 @@
       rgba(0, 0, 0, 0.25),
       rgba(0, 0, 0, 0.9)
     );
+  }
+
+  .card:hover .overlay {
+    opacity: 0;
+  }
+
+  .cardActive .overlay {
     opacity: 1;
   }
 }

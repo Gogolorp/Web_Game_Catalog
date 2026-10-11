@@ -14,14 +14,16 @@ function App() {
   const { data, loading, error } = useSheetData(SHEET_ID)
   const [menuGame, setMenuGame] = useState<GameData | null>(null)
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
+  const [activeCardKey, setActiveCardKey] = useState<string | null>(null)
   const longPressTimerRef = useRef<number | null>(null)
   const pointerStartRef = useRef({ x: 0, y: 0 })
 
-  useEffect(() => {
-    function closeMenu() {
-      setMenuGame(null)
-    }
+  function closeMenu() {
+    setMenuGame(null)
+    setActiveCardKey(null)
+  }
 
+  useEffect(() => {
     window.addEventListener('scroll', closeMenu, true)
 
     return () => window.removeEventListener('scroll', closeMenu, true)
@@ -41,23 +43,28 @@ function App() {
     }
   }
 
-  function openMenu(clientX: number, clientY: number, game: GameData) {
+  function openMenu(clientX: number, clientY: number, game: GameData, cardKey: string) {
     setMenuGame(game)
+    setActiveCardKey(cardKey)
     setMenuPosition(getMenuPosition(clientX, clientY))
   }
 
-  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>, game: GameData) {
+  function handlePointerDown(
+    event: React.PointerEvent<HTMLDivElement>,
+    game: GameData,
+    cardKey: string,
+  ) {
     event.stopPropagation()
     pointerStartRef.current = { x: event.clientX, y: event.clientY }
 
     if (event.pointerType === 'mouse') {
-      openMenu(event.clientX, event.clientY, game)
+      openMenu(event.clientX, event.clientY, game, cardKey)
       return
     }
 
     clearLongPressTimer()
     longPressTimerRef.current = window.setTimeout(() => {
-      openMenu(event.clientX, event.clientY, game)
+      openMenu(event.clientX, event.clientY, game, cardKey)
       longPressTimerRef.current = null
     }, 1000)
   }
@@ -79,7 +86,7 @@ function App() {
     }
 
     window.open(link, '_blank', 'noopener,noreferrer')
-    setMenuGame(null)
+    closeMenu()
   }
 
   if (loading) {
@@ -91,20 +98,22 @@ function App() {
   }
 
   return (
-    <div className={styles.container} onClick={() => setMenuGame(null)}>
+    <div className={styles.container} onClick={closeMenu}>
       <div className={styles.grid}>
         {data.map((game, index) => {
+          const cardKey = `${game['Название'] || 'game'}-${index}`
           const poster = game['Постер']
           const hasPoster = typeof poster === 'string' && poster.trim() !== ''
           const demoAvailable = isDemoAvailable(game['Есть демо'])
 
           return (
             <div
-              className={styles.card}
-              key={`${game['Название'] || 'game'}-${index}`}
+              className={`${styles.card} ${activeCardKey === cardKey ? styles.cardActive : ''}`}
+              key={cardKey}
               onClick={(event) => event.stopPropagation()}
+              onContextMenu={(event) => event.preventDefault()}
               onPointerCancel={clearLongPressTimer}
-              onPointerDown={(event) => handlePointerDown(event, game)}
+              onPointerDown={(event) => handlePointerDown(event, game, cardKey)}
               onPointerMove={handlePointerMove}
               onPointerUp={clearLongPressTimer}
             >
@@ -135,7 +144,7 @@ function App() {
           className={styles.contextMenu}
           style={{ left: menuPosition.x, top: menuPosition.y }}
           onClick={(event) => event.stopPropagation()}
-          onMouseLeave={() => setMenuGame(null)}
+          onMouseLeave={closeMenu}
         >
           <button
             className={styles.menuItem}
