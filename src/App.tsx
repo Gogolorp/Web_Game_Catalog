@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styles from './App.module.css'
 import { type GameData, useSheetData } from './useSheetData'
 
@@ -14,11 +14,61 @@ function App() {
   const { data, loading, error } = useSheetData(SHEET_ID)
   const [menuGame, setMenuGame] = useState<GameData | null>(null)
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
+  const longPressTimerRef = useRef<number | null>(null)
+  const pointerStartRef = useRef({ x: 0, y: 0 })
 
-  function openMenu(event: React.MouseEvent<HTMLDivElement>, game: GameData) {
-    event.stopPropagation()
+  useEffect(() => {
+    function closeMenu() {
+      setMenuGame(null)
+    }
+
+    window.addEventListener('scroll', closeMenu, true)
+
+    return () => window.removeEventListener('scroll', closeMenu, true)
+  }, [])
+
+  function getMenuPosition(clientX: number, clientY: number) {
+    return {
+      x: Math.max(8, Math.min(clientX, window.innerWidth - 184)),
+      y: Math.max(8, Math.min(clientY, window.innerHeight - 128)),
+    }
+  }
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  function openMenu(clientX: number, clientY: number, game: GameData) {
     setMenuGame(game)
-    setMenuPosition({ x: event.clientX, y: event.clientY })
+    setMenuPosition(getMenuPosition(clientX, clientY))
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>, game: GameData) {
+    event.stopPropagation()
+    pointerStartRef.current = { x: event.clientX, y: event.clientY }
+
+    if (event.pointerType === 'mouse') {
+      openMenu(event.clientX, event.clientY, game)
+      return
+    }
+
+    clearLongPressTimer()
+    longPressTimerRef.current = window.setTimeout(() => {
+      openMenu(event.clientX, event.clientY, game)
+      longPressTimerRef.current = null
+    }, 1000)
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const deltaX = Math.abs(event.clientX - pointerStartRef.current.x)
+    const deltaY = Math.abs(event.clientY - pointerStartRef.current.y)
+
+    if (deltaX > 10 || deltaY > 10) {
+      clearLongPressTimer()
+    }
   }
 
   function openLink(url: unknown) {
@@ -52,7 +102,11 @@ function App() {
             <div
               className={styles.card}
               key={`${game['Название'] || 'game'}-${index}`}
-              onClick={(event) => openMenu(event, game)}
+              onClick={(event) => event.stopPropagation()}
+              onPointerCancel={clearLongPressTimer}
+              onPointerDown={(event) => handlePointerDown(event, game)}
+              onPointerMove={handlePointerMove}
+              onPointerUp={clearLongPressTimer}
             >
               {hasPoster ? (
                 <img className={styles.poster} src={poster} alt={game['Название']} />

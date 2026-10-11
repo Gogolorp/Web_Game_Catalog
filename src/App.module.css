@@ -61,6 +61,7 @@
 
 .title {
   margin: 0 0 12px;
+  color: #ffffff;
   font-size: 20px;
   line-height: 1.2;
 }
@@ -119,4 +120,26 @@
 .menuItem:disabled {
   color: #7c8794;
   cursor: not-allowed;
+}
+
+.title,
+.detail,
+.demo,
+.noDemo {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+}
+
+@media (hover: none) {
+  .card:hover {
+    transform: none;
+  }
+
+  .overlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.25),
+      rgba(0, 0, 0, 0.9)
+    );
+    opacity: 1;
+  }
 }
